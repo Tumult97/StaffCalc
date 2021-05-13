@@ -1,4 +1,10 @@
+import 'dart:ui';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:staff_calc/Logic/Models/Ward.dart';
+import 'package:staff_calc/Logic/data.dart' as api;
+import 'package:staff_calc/components/IconNumberInput.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,33 +17,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.indigo,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Staff Allocation'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -46,68 +34,291 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  List<Ward> list;
+  Ward selectedItem;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  //region Globals
+  //var colorRed =
+  //endregion
+
+  //region [Input]
+  int beds = 0;
+  int blockedBeds = 0;
+  int patients = 0;
+  int ratio = 0;
+  int nursesOnShift = 0;
+  //endregion
+
+  //region [Output]
+  int totalNursesNeeded;
+  int allowedNurses;
+  int admitIOnCurrent;
+  int admitInclAcuity;
+  int availableBeds;
+  int availableNurses;
+  //endregion
+
+  @override
+  void initState() {
+    super.initState();
+    list = list == null ? api.Data.getWards() : list;
+    selectedItem = selectedItem == null ? (list.length == 0 ? new Ward() : list[0]) : selectedItem;
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
+        centerTitle: true,
         title: Text(widget.title),
+        leading: Icon(Icons.supervised_user_circle_outlined),
+        backgroundColor: Colors.indigo[900],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(15.00, 15.00, 15.00, 0.00),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 8,
+              child: Column(
+                //mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.all(Radius.circular(4)),
+                              border: Border.all(
+                                width: 2,
+                                color: Colors.red,
+                              )
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: Padding(
+                              padding: const EdgeInsets.all(0),
+                              child: DropdownButton<Ward>(
+                                value: selectedItem,
+                                icon: const Icon(
+                                  CupertinoIcons.chevron_down,
+                                  color: Colors.red,
+                                ),
+                                iconSize: 24,
+                                elevation: 16,
+                                isExpanded: true,
+                                style: const TextStyle(color: Colors.black),
+                                underline: null,
+                                onChanged: (Ward newValue) {
+                                  setState(() {
+                                    selectedItem = newValue;
+                                  });
+                                },
+                                items: list
+                                    .map<DropdownMenuItem<Ward>>((Ward value) {
+                                  return DropdownMenuItem<Ward>(
+                                    value: value,
+                                    child: Center(
+                                        child: Text(
+                                          "${value.name}",
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 24,
+                                          ),
+                                        )),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                    child: Row(
+                      children: [
+                        Expanded(child: Padding(
+                          padding: const EdgeInsets.fromLTRB(0.00, 0.00, 7.50, 0.00),
+                          child: IconNumberInput(
+                            labelText: "Patients",
+                            icon: Icon(Icons.supervised_user_circle_outlined),
+                            onChange: (value) => {
+                              patients = value.isNotEmpty ? int.parse(value) : 0
+                            },
+                          ),
+                        )),
+                        Expanded(child: Padding(
+                          padding: const EdgeInsets.fromLTRB(7.50, 0.00, 0.00, 0.00),
+                          child: IconNumberInput(
+                            labelText: "Blocked Beds",
+                            icon: Icon(Icons.single_bed_rounded),
+                            onChange: (value) => {
+                              blockedBeds = value.isNotEmpty ? int.parse(value) : 0
+                            },
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 20, 0, 0),
+                    child: Row(
+                      children: [
+                        Expanded(child: Padding(
+                          padding: const EdgeInsets.fromLTRB(0.00, 0.00, 7.50, 0.00),
+                          child: IconNumberInput(
+                            labelText: "One to One",
+                            icon: Icon(Icons.account_tree_outlined),
+                            onChange: (String value) => {
+                              ratio = value.isNotEmpty ? int.parse(value) : 0
+                            },
+                          ),
+                        )),
+                        Expanded(child: Padding(
+                          padding: const EdgeInsets.fromLTRB(7.50, 0.00, 0.00, 0.00),
+                          child: IconNumberInput(
+                            labelText: "Staff on Shift",
+                            icon: Icon(Icons.recent_actors_outlined),
+                            onChange: (value) => {
+                              nursesOnShift = value.isNotEmpty ? int.parse(value) : 0
+                            },
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0.00, 20, 0.00, 20),
+                        child: getResultCard(),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(0, 0, 7.5, 0),
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
+                                child: TextButton(
+                                  onPressed: calculateStaff,
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(child: Center(child: Text("Reset")))
+                                    ],
+                                  ),
+                                  style: ButtonStyle(
+                                    backgroundColor: MaterialStateProperty.all<Color>(Colors.blue[300]),
+                                    foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                      ),
+                      Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(7.5, 0, 0, 0),
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
+                                child: TextButton(
+                                  onPressed: calculateStaff,
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(child: Center(child: Text("Submit"),))
+                                    ],
+                                  ),
+                                  style: ButtonStyle(
+                                    backgroundColor: MaterialStateProperty.all<Color>(Colors.blue[900]),
+                                    foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                      ),
+                    ],
+                  )
+                ],
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  void calculateStaff() {
+    setState(() {
+      totalNursesNeeded = ratio + (patients > 10 ? 1 : 0) + ((patients - ratio)/2).ceil();
+      allowedNurses = ((patients * selectedItem.labourHours)/24).ceil();
+      admitIOnCurrent = (patients - ratio) % 2 > 0 ? 1 : 0;
+      admitInclAcuity = ((allowedNurses - totalNursesNeeded) * 2) + admitIOnCurrent;
+      availableBeds = beds - blockedBeds - patients;
+      //weird shift
+    });
+  }
+
+  void resetVariables(){
+    // setState(() {
+    //   beds = 0;
+    //   blockedBeds = 0;
+    //   patients = 0;
+    //   ratio = 0;
+    //   nursesOnShift = 0;
+    //   totalNursesNeeded = 0;
+    //   allowedNurses = 0;
+    //   admitIOnCurrent = 0;
+    //   admitInclAcuity = 0;
+    //   availableBeds = 0;
+    // });
+  }
+
+  Widget getResultCard(){
+    Widget resultCard;
+
+    if(totalNursesNeeded != null && allowedNurses != null && admitIOnCurrent != null && admitInclAcuity != null && availableBeds != null){
+      resultCard = Card(
+        elevation: 2,
+        child: Expanded(
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Container(
+                  child: Column(
+                    children: [
+                      Text("$totalNursesNeeded"),
+                      Text("$allowedNurses"),
+                      Text("$admitIOnCurrent"),
+                      Text("$admitInclAcuity"),
+                      Text("$availableBeds"),
+                    ],
+                  ),
+                ),
+              ),
+              Divider(),
+              Expanded(
+                child: Container(
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    else{
+      resultCard = null;
+    }
+
+    return resultCard;
   }
 }
